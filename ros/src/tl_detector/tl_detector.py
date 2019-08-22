@@ -104,8 +104,8 @@ class TLDetector(object):
         if self.waypoints is None:
             return
         # there is not in the commits
-        # print("waypoints:")
-        # print(self.waypoints)
+        # rospy.loginfo("waypoints:")
+        # rospy.loginfo(self.waypoints)
         import numpy as np
         def distance_pose(pose1, pose2):
             dis = math.sqrt((pose1.position.x - pose2.position.x)**2 + (pose1.position.y - pose2.position.y)**2)
