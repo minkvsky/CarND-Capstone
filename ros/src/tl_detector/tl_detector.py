@@ -78,7 +78,7 @@ class TLDetector(object):
         of times till we start using it. Otherwise the previous stable state is
         used.
         '''
-        if self.state != state:
+        if self.state != state: # TODO WHERE is it ?
             self.state_count = 0
             self.state = state
         elif self.state_count >= STATE_COUNT_THRESHOLD:
@@ -101,7 +101,17 @@ class TLDetector(object):
 
         """
         #TODO implement
-        return 0
+        if self.waypoints is None:
+            return
+        # there is not in the commits
+        # print("waypoints:")
+        # print(self.waypoints)
+        import numpy as np
+        def distance_pose(pose1, pose2):
+            dis = math.sqrt((pose1.position.x - pose2.position.x)**2 + (pose1.position.y - pose2.position.y)**2)
+            return dis
+        dis_list = [distance_pose(pose, pose2) for pose2 in self.waypoints]
+        return np.argmin(dis_list)
 
     def get_light_state(self, light):
         """Determines the current color of the traffic light
