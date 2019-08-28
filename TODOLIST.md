@@ -31,6 +31,13 @@ install other softwar
 - [ ] redownload simulator and find the simulator with camera; 380M > 195M !!! what happened?
 - [ ] start with camera? camera necessary ?
 
+# debug
+
+```
+sudo apt-get install -y ros-melodic-dbw-mkz-msgs
+rosdep install --from-paths src --ignore-src --rosdistro=melodic -y
+```
+
 # src
 
 - [ ] single node debug 
@@ -66,3 +73,12 @@ not very well wolf performance
  - [ ] tl_detector
  - [ ] 
 
+# how to dev ros ;
+
+step by step?
+
+# Suggested Order of Project Development
+
+how to test?
+
+# waypoints_update
