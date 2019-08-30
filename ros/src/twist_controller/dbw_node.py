@@ -57,6 +57,16 @@ class DBWNode(object):
         # self.controller = Controller(<Arguments you wish to provide>)
 
         # TODO: Subscribe to all the topics you need to
+        rospy.Subscriber('/zvehicle/dbw_enabled', Bool, self.dwb_enabled_cb)
+        rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.velocity_cb)
+
+        self.dbw_enabled = None
+        self.linear_vel = None
+        self.angular_vel = None
+        self.current_vel = None
+
+
 
         self.loop()
 
@@ -73,6 +83,16 @@ class DBWNode(object):
             # if <dbw is enabled>:
             #   self.publish(throttle, brake, steer)
             rate.sleep()
+    
+    def dbw_enabled_cb(self, msg):
+        self.dbw_enabled = msg
+    
+    def twist_cb(self, msg):
+        self.linear_vel = msg.twist.linear.x
+        self.angular_vel = msg.twist.angular.z
+
+    def velocity_cb(self, msg):
+        self.current_vel = msg.twist.linear.x
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()
