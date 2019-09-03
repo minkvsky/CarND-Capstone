@@ -1,3 +1,5 @@
+import cv2
+import numpy as np
 from styx_msgs.msg import TrafficLight
 
 class TLClassifier(object):
@@ -16,6 +18,7 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
+
 
         hsv_img = cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
         #red
@@ -39,5 +42,7 @@ class TLClassifier(object):
         g = cv2.countNonZero(frame_threshed)
         if g > 50:
             return TrafficLight.GREEN
-            
+
+        # import ipdb; ipdb.set_trace()
+
         return TrafficLight.UNKNOWN
