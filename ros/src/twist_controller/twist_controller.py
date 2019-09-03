@@ -1,66 +1,70 @@
-
+import time
 from pid import PID
-from lowpass import LowPassFilter
 from yaw_controller import YawController
-import rospy
-
 
 GAS_DENSITY = 2.858
 ONE_MPH = 0.44704
-
+MAX_SPEED = 18.2 # kph set in waypoint loader
 
 class Controller(object):
-    def __init__(self, vehicle_mass, fuel_capacity, brake_deadband, decel_limit, 
-        accel_limit, wheel_radius, wheel_base, steer_ratio, max_lat_accel, max_steer_angle):
-        # TODO: Implement
-        self.yaw_controller = YawController(wheel_base, steer_ratio, 0.1, max_lat_accel, max_steer_angle)
+    def __init__(self, vehicle_mass, brake_deadband, wheel_radius, decel_limit, wheel_base, 
+                 steer_ratio, max_lat_accel, max_steer_angle, Kp, Ki, Kd):
 
-        kp = 0.3
-        ki = 0.1
-        kd = 0. 
-        mn = 0. 
-        mx = 0.2 
-        self.throttle_controller = PID(kp, ki, kd, mn, mx)
+        min_speed = 1.0 * ONE_MPH
+        self.throttle_pid = PID(Kp, Ki, Kd)
+        self.yaw_control = YawController(wheel_base,
+                                         steer_ratio,
+                                         min_speed,
+                                         max_lat_accel,
+                                         max_steer_angle)
 
-        tau = 0.5
-        ts = .02
-        self.vel_lpf = LowPassFilter(tau, ts)
-
-        self.vehicle_mass = vehicle_mass
-        self.fuel_capacity = fuel_capacity
         self.brake_deadband = brake_deadband
-        self.decel_limit = decel_limit
-        self.accel_limit = accel_limit
+        self.vehicle_mass = vehicle_mass
         self.wheel_radius = wheel_radius
+        self.decel_limit = decel_limit
+        self.last_time = None
 
-        self.last_time = rospy.get_time()
 
+    def control(self, target_vel, target_omega, current_vel, dbw_enabled):
+        # Calculate the desired throttle based on target_vel, target_omega and current_vel
+        # target_vel and target_omega are desired linear and angular velocities
 
-    def control(self, current_vel, dbw_enabled, linear_vel, angular_vel):
-        # TODO: Change the arg, kwarg list to suit your needs
-        # Return throttle, brake, steer
-        if not dbw_enabled:
-            self.throttle_controller.reset()
-            return 1., 0., 0.
-        current_vel = self.vel_lpf.filt(current_vel)
-        steering = self.yaw_controller.get_steering(linear_vel, angular_vel, current_vel)
+        if self.last_time is None or not dbw_enabled:
+            self.last_time = time.time()
+            return 0.0, 0.0, 0.0
 
-        vel_error = linear_vel - current_vel
-        self.last_vel = current_vel
-        current_time = rospy.get_time()
-        sample_time = current_time - self.last_time
-        self.last_time = current_time
+        dt = time.time() - self.last_time
 
-        throttle = self.throttle_controller.step(vel_error, sample_time)
-        brake = 0
-        
-        if linear_vel == 0 and current_vel < 0.1:
-            throttle = 0
-            brake = 400
-        elif throttle < 0.1 and vel_error < 0:
-            throttle = 0
-            decel = max(vel_error, self.decel_limit)
-            brake = abs(decel) * self.vehicle_mass * self.wheel_radius
-        
-        return throttle, brake, steering
-        
+        # Assumed maximum speed is in mph
+
+        error = min(target_vel.x, MAX_SPEED * 0.277778) - current_vel.x
+
+        throttle = self.throttle_pid.step(error, dt)
+
+        # Max throttle is 1.0
+        throttle = max(0.0, min(1.0, throttle))
+
+        # Brake or decelerate only if the target velocity is lower than the current velocity
+        # Brake value is in N/m and is calculated using car mass, acceleration and wheel radius
+        # longitudinal force = mass of car * acceleration (or deceleration)
+        # Torque = longitudinal force * wheel radius, which is supplied as brake value
+        # Further refinements can be done by adding the mass of fuel and the passengers to the mass
+        # of the car in real world scenario
+        if error < 0: # Needs to decelerate
+            deceleration = abs(error) / dt
+            if abs(deceleration) > abs(self.decel_limit)*500:
+                deceleration = self.decel_limit*500  # Limited to decelartion limits
+            longitudinal_force = self.vehicle_mass * deceleration
+            brake = longitudinal_force * self.wheel_radius
+            if brake < self.brake_deadband:
+                brake = 0.0
+            throttle = 0.0
+        else:
+            brake = 0.0
+
+        # Steering control is using Yaw Control..
+        steer = self.yaw_control.get_steering(target_vel.x, target_omega.z, current_vel.x)
+
+        self.last_time = time.time()
+
+        return throttle, brake, steer
