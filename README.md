@@ -2,6 +2,16 @@ This is the project repo for the final project of the Udacity Self-Driving Car N
 
 Please use **one** of the two installation options, either native **or** docker installation.
 
+### env prepare
+
+require: docker and nvidia-docker
+
+`cd Carnd-capstone && sudo sh run_cuda_sun.sh`
+
+### recommend IDE
+
+roboware-studio
+
 ### udacity capstone workspace update
 cd CarND-Capstone/ros && sh workspace-update.sh
 
